@@ -55,6 +55,22 @@ pub struct ColliderSet {
 }
 
 impl ColliderSet {
+    /// Adds `translation` to world coordinates without treating the change as motion.
+    ///
+    /// The translation must be finite. Call between simulation steps and translate the
+    /// complete rigid-body, collider, multibody, contact and broad-phase/query context
+    /// before simulating or exposing it. Application/interpolation caches and any
+    /// soft-body world coordinates must be handled in the same transaction.
+    /// This method alone does not translate a complete physics world.
+    ///
+    /// Updates every collider world pose, including disabled colliders, while preserving
+    /// parent-relative poses and existing physical-movement flags.
+    pub fn translate_origin(&mut self, translation: crate::math::Vector) {
+        for (_, collider) in self.colliders.iter_mut() {
+            collider.pos.0.translation += translation;
+        }
+    }
+
     /// Creates a new empty collection of colliders.
     pub fn new() -> Self {
         ColliderSet {

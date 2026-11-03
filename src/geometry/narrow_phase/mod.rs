@@ -419,6 +419,41 @@ impl Default for NarrowPhase {
 }
 
 impl NarrowPhase {
+    /// Adds `translation` to world coordinates without treating the change as motion.
+    ///
+    /// The translation must be finite. Call between simulation steps and translate the
+    /// complete rigid-body, collider, multibody, contact and broad-phase/query context
+    /// before simulating or exposing it. Application/interpolation caches and any
+    /// soft-body world coordinates must be handled in the same transaction.
+    /// This method alone does not translate a complete physics world.
+    ///
+    /// Preserves manifold-local points, normals, identities and impulses. Only solver
+    /// contact anchors on world-attached sides (`u32::MAX`) translate; solver-body-local
+    /// anchors remain unchanged, including in clustered solver manifolds.
+    pub fn translate_origin(&mut self, translation: crate::math::Vector) {
+        for edge in &mut self.contact_graph.graph.edges {
+            let Some(pair) = edge.weight.rigid_mut() else {
+                continue;
+            };
+            for manifold in pair
+                .manifolds
+                .iter_mut()
+                .chain(pair.solver_clusters.iter_mut())
+                .chain(pair.solver_clusters_prev.iter_mut())
+            {
+                let [body1, body2] = manifold.data.solver_body_ids;
+                for contact in &mut manifold.data.solver_contacts {
+                    if body1 == u32::MAX {
+                        contact.anchor1 += translation;
+                    }
+                    if body2 == u32::MAX {
+                        contact.anchor2 += translation;
+                    }
+                }
+            }
+        }
+    }
+
     /// Creates a new empty narrow-phase.
     pub fn new() -> Self {
         Self::with_query_dispatcher(DefaultQueryDispatcher)

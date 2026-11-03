@@ -79,6 +79,24 @@ pub struct RigidBodySet {
 }
 
 impl RigidBodySet {
+    /// Adds `translation` to world coordinates without treating the change as motion.
+    ///
+    /// The translation must be finite. Call between simulation steps and translate the
+    /// complete rigid-body, collider, multibody, contact and broad-phase/query context
+    /// before simulating or exposing it. Application/interpolation caches and any
+    /// soft-body world coordinates must be handled in the same transaction.
+    /// This method alone does not translate a complete physics world.
+    ///
+    /// Updates current/next poses and world mass properties, including disabled bodies;
+    /// activation, velocities, forces and existing dirty flags are preserved.
+    pub fn translate_origin(&mut self, translation: crate::math::Vector) {
+        for (_, body) in self.bodies.iter_mut() {
+            body.pos.position.translation += translation;
+            body.pos.next_position.translation += translation;
+            body.update_world_mass_properties();
+        }
+    }
+
     /// Creates a new empty collection of rigid bodies.
     ///
     /// Call this once when setting up your physics world. The collection will

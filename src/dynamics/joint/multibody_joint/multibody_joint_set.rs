@@ -76,6 +76,32 @@ pub struct MultibodyJointSet {
 }
 
 impl MultibodyJointSet {
+    /// Adds `translation` to world coordinates without treating the change as motion.
+    ///
+    /// The translation must be finite. Call between simulation steps and translate the
+    /// complete rigid-body, collider, multibody, contact and broad-phase/query context
+    /// before simulating or exposing it. Application/interpolation caches and any
+    /// soft-body world coordinates must be handled in the same transaction.
+    /// This method alone does not translate a complete physics world.
+    ///
+    /// Updates cached link poses and free/fixed world-attached root coordinates. Child
+    /// joint anchors and generalized velocities are preserved.
+    pub fn translate_origin(&mut self, translation: crate::math::Vector) {
+        for (_, multibody) in self.multibodies.iter_mut() {
+            for (index, link) in multibody.links_mut().enumerate() {
+                link.local_to_world.translation += translation;
+                if index == 0 {
+                    link.local_to_parent.translation += translation;
+                    if link.joint.data.locked_axes.is_empty() {
+                        link.joint.set_free_pos(link.local_to_world);
+                    } else {
+                        link.joint.data.local_frame1.translation += translation;
+                    }
+                }
+            }
+        }
+    }
+
     /// Create a new empty set of multibodies.
     pub fn new() -> Self {
         Self {
