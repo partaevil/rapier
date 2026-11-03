@@ -2,6 +2,11 @@
 
 pub mod systemparams;
 
+mod origin_translation;
+pub use origin_translation::OriginTranslationError;
+#[cfg(test)]
+mod origin_translation_tests;
+
 use bevy::prelude::*;
 use rapier::geometry::{ContactData, ContactManifoldData};
 use rapier::parry::query::{PersistentQueryDispatcher, QueryDispatcher};
